@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shimaore ↔ French Translator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Shimaore ↔ French Translator</h1>
+        <p class="subtitle">Maore Language Project</p>
+      </header>
+
+      <hr />
+
+      <form class="form" method="post" action="{{ url_for('translate_post') }}">
+        <section class="direction">
+          <label class="radio">
+            <input
+              type="radio"
+              name="direction"
+              value="Shimaore → French"
+              {% if direction == 'Shimaore → French' %}checked{% endif %}
+            />
+            Shimaore → French
+          </label>
+          <label class="radio">
+            <input
+              type="radio"
+              name="direction"
+              value="French → Shimaore"
+              {% if direction == 'French → Shimaore' %}checked{% endif %}
+            />
+            French → Shimaore
+          </label>
+        </section>
+
+        <hr />
+
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-title">
+              {% if direction == 'Shimaore → French' %}
+                ✏️ Shimaore — input
+              {% else %}
+                ✏️ French — input
+              {% endif %}
+            </div>
+
+            <textarea
+              class="textarea"
+              name="user_input"
+              placeholder="{% if direction == 'Shimaore → French' %}Enter Shimaore text…{% else %}Entrez votre texte en français…{% endif %}"
+              rows="10"
+            >{{ user_input }}</textarea>
+
+            <button class="button" type="submit">Translate ↗️</button>
+
+            {% if error %}
+              <div class="alert">{{ error }}</div>
+            {% endif %}
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              {% if direction == 'Shimaore → French' %}
+                🌐 French — translation
+              {% else %}
+                🌐 Shimaore — translation
+              {% endif %}
+            </div>
+
+            {% if result %}
+              <div class="result-box {% if is_exact %}exact{% endif %}">{{ result }}</div>
+            {% else %}
+              <div class="result-box placeholder">Translation will appear here…</div>
+            {% endif %}
+          </div>
+        </section>
+      </form>
+    </main>
+  </body>
+</html>
