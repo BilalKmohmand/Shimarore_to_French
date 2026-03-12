@@ -167,11 +167,14 @@ def translate_post():
         )
     except Exception as e:
         app.logger.exception("Translation request failed")
+        safe_details = (str(e) or e.__class__.__name__).strip()
+        if len(safe_details) > 240:
+            safe_details = safe_details[:240] + "…"
         return render_template(
             "index.html",
             direction=direction,
             user_input=user_input,
             result=None,
             is_exact=False,
-            error="Something went wrong. Please try again in a moment.",
+            error=f"Something went wrong: {safe_details}",
         )
