@@ -3,7 +3,14 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": [
+          "shimaore_french_dataset.csv",
+          "templates/**",
+          "static/**"
+        ]
+      }
     }
   ],
   "routes": [
