@@ -78,12 +78,15 @@ IMPORTANT RULES:
 """
 
     client = OpenAI(api_key=api_key)
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=f"{prompt}\nSentence: {text}",
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a translation assistant specializing in Shimaore and French."},
+            {"role": "user", "content": f"{prompt}\nSentence: {text}"}
+        ],
     )
 
-    return response.output_text.strip()
+    return response.choices[0].message.content.strip()
 
 
 # Load dataset at startup
