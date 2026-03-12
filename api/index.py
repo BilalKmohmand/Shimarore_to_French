@@ -153,7 +153,20 @@ def translate_post():
             is_exact=False,
             error=None,
         )
-    except Exception:
+    except RuntimeError as e:
+        message = str(e)
+        if "OPENAI_API_KEY" in message:
+            message = "OPENAI_API_KEY is not set on the server. Add it in Vercel → Project → Settings → Environment Variables, then redeploy."
+        return render_template(
+            "index.html",
+            direction=direction,
+            user_input=user_input,
+            result=None,
+            is_exact=False,
+            error=message,
+        )
+    except Exception as e:
+        app.logger.exception("Translation request failed")
         return render_template(
             "index.html",
             direction=direction,
