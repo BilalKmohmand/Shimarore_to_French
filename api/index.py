@@ -2,14 +2,18 @@ import os
 import sys
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 from flask import Flask, render_template, request
 import pandas as pd
 import unicodedata
 from openai import OpenAI
 
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+
+app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
 
 
 def normalize(text: str) -> str:
@@ -83,7 +87,8 @@ IMPORTANT RULES:
 
 
 # Load dataset at startup
-DATASET_PATH = os.getenv("DATASET_PATH", "../shimaore_french_dataset.csv")
+DEFAULT_DATASET_PATH = os.path.join(PROJECT_ROOT, "shimaore_french_dataset.csv")
+DATASET_PATH = os.getenv("DATASET_PATH", DEFAULT_DATASET_PATH)
 try:
     DF, EXAMPLES = load_dataset(DATASET_PATH)
 except FileNotFoundError:
