@@ -31,9 +31,11 @@ def load_dataset(csv_path: str):
     df["shimaore_norm"] = df["shimaore"].apply(normalize)
     df["french_norm"] = df["french"].apply(normalize)
 
+    # Limit examples for AI prompt to stay under token limits (first 100 only)
+    sample_df = df.head(100)
     examples = "\n".join(
         f'Shimaore: {row["shimaore"]} -> French: {row["french"]}'
-        for _, row in df.iterrows()
+        for _, row in sample_df.iterrows()
     )
     return df, examples
 
