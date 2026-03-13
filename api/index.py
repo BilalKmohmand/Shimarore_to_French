@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 
 # Add parent directory to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,11 +18,13 @@ app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
 
 
 def normalize(text: str) -> str:
-    return (
+    text = (
         unicodedata.normalize("NFD", text.strip().lower())
         .encode("ascii", "ignore")
         .decode("ascii")
     )
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def load_dataset(csv_path: str):
@@ -31,8 +34,10 @@ def load_dataset(csv_path: str):
     df["shimaore_norm"] = df["shimaore"].apply(normalize)
     df["french_norm"] = df["french"].apply(normalize)
 
-    # Limit examples for AI prompt to stay under token limits (first 100 only)
-    sample_df = df.head(100)
+    sample_df = df[(df["shimaore"].astype(str).str.len() <= 120) & (df["french"].astype(str).str.len() <= 120)]
+    if sample_df.empty:
+        sample_df = df
+    sample_df = sample_df.sample(n=min(150, len(sample_df)), random_state=1)
     examples = "\n".join(
         f'Shimaore: {row["shimaore"]} -> French: {row["french"]}'
         for _, row in sample_df.iterrows()
