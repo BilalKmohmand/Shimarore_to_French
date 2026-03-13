@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import heapq
 
 # Add parent directory to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -34,15 +35,51 @@ def load_dataset(csv_path: str):
     df["shimaore_norm"] = df["shimaore"].apply(normalize)
     df["french_norm"] = df["french"].apply(normalize)
 
-    sample_df = df[(df["shimaore"].astype(str).str.len() <= 120) & (df["french"].astype(str).str.len() <= 120)]
-    if sample_df.empty:
-        sample_df = df
-    sample_df = sample_df.sample(n=min(150, len(sample_df)), random_state=1)
-    examples = "\n".join(
-        f'Shimaore: {row["shimaore"]} -> French: {row["french"]}'
-        for _, row in sample_df.iterrows()
+    return df
+
+
+def select_relevant_examples(user_text: str, direction: str, df: pd.DataFrame, max_examples: int = 25) -> str:
+    tokens = normalize(user_text).split()
+    if not tokens:
+        return ""
+
+    if direction == "Shimaore → French":
+        source_norm_col = "shimaore_norm"
+        source_col = "shimaore"
+        target_col = "french"
+    else:
+        source_norm_col = "french_norm"
+        source_col = "french"
+        target_col = "shimaore"
+
+    candidates = df[(df[source_col].astype(str).str.len() <= 140) & (df[target_col].astype(str).str.len() <= 140)]
+    if candidates.empty:
+        candidates = df
+
+    scored = []
+    for row in candidates.itertuples(index=False):
+        try:
+            source_norm = getattr(row, source_norm_col)
+        except AttributeError:
+            continue
+        score = 0
+        for t in tokens:
+            if t and t in source_norm:
+                score += 1
+        if score:
+            scored.append((score, getattr(row, source_col), getattr(row, target_col)))
+
+    if not scored:
+        sample = candidates.head(max_examples)
+        return "\n".join(
+            f"{source_col.title()}: {r[source_col]} -> {target_col.title()}: {r[target_col]}"
+            for _, r in sample.iterrows()
+        )
+
+    top = heapq.nlargest(max_examples, scored, key=lambda x: x[0])
+    return "\n".join(
+        f"{source_col.title()}: {src} -> {target_col.title()}: {tgt}" for _, src, tgt in top
     )
-    return df, examples
 
 
 def exact_match(text: str, direction: str, df: pd.DataFrame):
@@ -58,7 +95,7 @@ def exact_match(text: str, direction: str, df: pd.DataFrame):
     return None
 
 
-def translate_with_ai(text: str, direction: str, examples: str) -> str:
+def translate_with_ai(text: str, direction: str, df: pd.DataFrame) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set")
@@ -69,18 +106,17 @@ def translate_with_ai(text: str, direction: str, examples: str) -> str:
         else "Translate the following French sentence into Shimaore."
     )
 
+    examples = select_relevant_examples(text, direction, df)
+
     prompt = f"""You are a translation assistant specializing in Shimaore and French.
 
-Below is the COMPLETE translation dataset between Shimaore and French:
+Below are example translation pairs between Shimaore and French:
 
 {examples}
 
 IMPORTANT RULES:
-1. First, check if the sentence exists EXACTLY in the dataset above.
-   - If found: return that EXACT translation, nothing else.
-2. If the sentence is NOT in the dataset:
-   - {instruction}
-   - Aim for natural meaning, preserve sentiment and structure.
+1. {instruction}
+2. Aim for natural meaning, preserve sentiment and structure.
 3. Output ONLY the translated text. No arrows, no original sentence, no labels, no explanation. Just the translation.
 """
 
@@ -100,9 +136,9 @@ IMPORTANT RULES:
 DEFAULT_DATASET_PATH = os.path.join(PROJECT_ROOT, "shimaore_french_dataset.csv")
 DATASET_PATH = os.getenv("DATASET_PATH", DEFAULT_DATASET_PATH)
 try:
-    DF, EXAMPLES = load_dataset(DATASET_PATH)
+    DF = load_dataset(DATASET_PATH)
 except FileNotFoundError:
-    DF, EXAMPLES = None, ""
+    DF = None
 
 
 @app.route("/", methods=["GET"])
@@ -154,7 +190,7 @@ def translate_post():
                 error=None,
             )
 
-        result = translate_with_ai(user_input, direction, EXAMPLES)
+        result = translate_with_ai(user_input, direction, DF)
         return render_template(
             "index.html",
             direction=direction,
